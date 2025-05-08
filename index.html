@@ -21,9 +21,6 @@
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
           console.log("📤 Sent via ReactNativeWebView");
-        } else {
-          window.postMessage(msgText, "*");
-          console.log("📤 Sent via window.postMessage");
         }
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
