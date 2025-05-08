@@ -22,12 +22,6 @@
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
           console.log("📤 Sent via ReactNativeWebView");
-          return;
-        }
-        if (window.AndroidInterface?.postMessage) {
-          window.AndroidInterface.postMessage(msgText);
-          console.log("📤 Sent via AndroidInterface");
-          return;
         }
         const outputDiv = document.getElementById("output");
         if (outputDiv) {
