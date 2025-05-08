@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test JS Bridge</title>
+</head>
+<body>
+  <h2>Test JS Bridge</h2>
+  <script>
+    function sendMessage(message) {
+      const msgText = typeof message === "string" ? message : JSON.stringify(message);
+      console.log("📤 Sending:", msgText);
+      try {
+        if (window.ReactNativeWebView?.postMessage) {
+          window.ReactNativeWebView.postMessage(msgText);
+          console.log("📤 Sent via ReactNativeWebView");
+        } else {
+          window.postMessage(msgText, "*");
+          console.log("📤 Sent via window.postMessage");
+        }
+      } catch (e) {
+        console.error("❌ Failed to send:", e.message);
+      }
+    }
+
+    window.testBridge = function() {
+      console.log("🛠️ Test called");
+      sendMessage("TestReady");
+    };
+
+    window.sendTest = function(msg) {
+      console.log("📤 Sending test:", msg);
+      sendMessage(msg);
+    };
+  </script>
+</body>
+</html>
