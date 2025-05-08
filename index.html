@@ -9,7 +9,6 @@
 </head>
 <body>
   <h2>JS Bridge Active</h2>
-  <div id="output"></div>
 
   <script>
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
@@ -22,11 +21,9 @@
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
           console.log("📤 Sent via ReactNativeWebView");
-        }
-        const outputDiv = document.getElementById("output");
-        if (outputDiv) {
-          outputDiv.innerText = msgText;
-          console.log("📤 Set DOM output");
+        } else {
+          window.postMessage(msgText, "*");
+          console.log("📤 Sent via window.postMessage");
         }
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
