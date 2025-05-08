@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Web Bridge Listener</title>
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js"></script>
+</head>
+<body>
+  <h2>Web Bridge Listening</h2>
+
+  <script>
+    const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
+    const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
+
+    function sendToThunkableWebView(msg) {
+      const message = typeof msg === "object" ? JSON.stringify(msg) : String(msg);
+      try {
+        // ✅ iOS WebView
+        if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+          window.ReactNativeWebView.postMessage(message);
+        }
+
+        // ✅ Android fallback (most reliable in Thunkable)
+        window.postMessage(message, "*");
+
+        // ✅ Also trigger a custom event for Thunkable Web Viewer block: "value from post message"
+        const evt = new CustomEvent("message", { detail: message });
+        document.dispatchEvent(evt);
+      } catch (e) {
+        console.error("❌ Failed to send to WebView:", e.message);
+      }
+    }
+
+    window.addEventListener("message", async (event) => {
+      console.log("📩 Message received from Thunkable:", event.data);
+      let data;
+      try {
+        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      } catch (e) {
+        console.error("❌ JSON parse error:", e.message);
+        return;
+      }
+
+      const token = data.token;
+      const channelName = data.channelName;
+
+      if (!token || !channelName) {
+        console.warn("❌ Missing token or channelName");
+        return;
+      }
+
+      Backendless.initApp(APP_ID, API_KEY);
+      Backendless.UserService.setCurrentUserToken(token);
+
+      try {
+        const channel = Backendless.Messaging.subscribe(channelName);
+        channel.addMessageListener((msg) => {
+          console.log("📤 Message received:", msg);
+          sendToThunkableWebView(msg);
+        });
+
+        console.log("✅ Subscribed to:", channelName);
+      } catch (e) {
+        console.error("❌ Subscription error:", e.message);
+      }
+    });
+
+    console.log("📡 Web Bridge loaded");
+  </script>
+</body>
+</html>
