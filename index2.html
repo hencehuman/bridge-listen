@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Web Bridge Listener</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Access-Control-Allow-Origin" content="*">
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js"></script>
+</head>
+<body>
+  <h2>Listening Bridge Active</h2>
+
+  <script>
+    const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
+    const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
+
+    function sendMessage(message, retryCount = 0) {
+      const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
+      console.log("📤 Sending:", msgText);
+      try {
+        if (window.ReactNativeWebView?.postMessage) {
+          window.ReactNativeWebView.postMessage(msgText);
+          console.log("📤 Sent via ReactNativeWebView");
+        } else {
+          window.postMessage(msgText, "*");
+          console.log("📤 Sent via window.postMessage");
+        }
+      } catch (e) {
+        console.error("❌ Failed to send:", e.message);
+        console.log("🔍 Debug: ReactNativeWebView:", !!window.ReactNativeWebView, "WebView Env:", navigator.userAgent, "Retry:", retryCount);
+        if (retryCount < 3) {
+          console.log("🔄 Retrying sendMessage, attempt:", retryCount + 1);
+          setTimeout(() => sendMessage(message, retryCount + 1), 1000);
+        } else {
+          console.warn("⚠️ Max retries reached");
+        }
+      }
+    }
+
+    function initializeBridge() {
+      console.log("🛠️ Initializing WebBridge...");
+      sendMessage({ status: "init", message: "Bridge initializing" });
+      setTimeout(() => {
+        if (!window.ReactNativeWebView) {
+          console.warn("⚠️ ReactNativeWebView not detected, using fallback");
+          sendMessage({ status: "warning", message: "Using window.postMessage fallback" });
+        }
+      }, 2000);
+    }
+
+    window.addEventListener("message", async (event) => {
+      console.log("📩 Received message:", event.data);
+      let data;
+
+      try {
+        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+      } catch (e) {
+        console.error("❌ Failed to parse JSON:", e.message);
+        sendMessage({ status: "error", message: "Invalid JSON format" });
+        return;
+      }
+
+      if (data.action === "testBridge") {
+        console.log("🛠️ Bridge test: Script loaded");
+        sendMessage("BridgeReady");
+        return;
+      }
+
+      const token = data.token;
+      const channelName = data.channelName;
+
+      if (!token || !channelName) {
+        console.warn("❌ Missing token or channelName");
+        sendMessage({ status: "error", message: "Missing token or channelName" });
+        return;
+      }
+
+      try {
+        Backendless.initApp(APP_ID, API_KEY);
+        Backendless.UserService.setCurrentUserToken(token);
+        const channel = Backendless.Messaging.subscribe(channelName);
+        channel.addMessageListener((message) => {
+          console.log("📤 Forwarding message:", message);
+          sendMessage(message);
+        });
+        console.log("✅ Subscribed to:", channelName);
+        sendMessage({ status: "success", message: `Listening on ${channelName}` });
+      } catch (e) {
+        console.error("❌ Subscription error:", e.message);
+        sendMessage({ status: "error", message: e.message });
+      }
+    });
+
+    initializeBridge();
+    console.log("📡 WebBridge ready");
+  </script>
+</body>
+</html>
