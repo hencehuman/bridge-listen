@@ -12,20 +12,19 @@
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
 
-    // Start listening on command from Thunkable
+    // Handle incoming setup message from Thunkable Web Bridge
     window.addEventListener("message", async (event) => {
-      console.log("📩 Received message:", event.data);
-      let data;
+      console.log("📩 Received setup message:", event.data);
 
+      let data;
       try {
         data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
       } catch (e) {
-        console.error("❌ Failed to parse JSON:", e.message);
+        console.error("❌ Invalid JSON:", e.message);
         return;
       }
 
-      const token = data.token;
-      const channelName = data.channelName;
+      const { token, channelName } = data;
 
       if (!token || !channelName) {
         console.warn("❌ Missing token or channelName");
@@ -39,14 +38,10 @@
         const channel = Backendless.Messaging.subscribe(channelName);
         channel.addMessageListener((message) => {
           const msg = typeof message === "object" ? JSON.stringify(message) : String(message);
-          console.log("📤 Forwarding to WebView:", msg);
+          console.log("📤 Broadcasting to Thunkable Web Bridge:", msg);
 
-          // ✅ Standard cross-platform WebViewer call
-          if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
-            window.ReactNativeWebView.postMessage(msg);
-          } else {
-            console.warn("⚠️ ReactNativeWebView.postMessage not available");
-          }
+          // ✅ Thunkable JS Web Bridge uses this for both iOS and Android
+          window.postMessage(msg, "*");
         });
 
         console.log("✅ Subscribed to:", channelName);
@@ -55,7 +50,7 @@
       }
     });
 
-    console.log("📡 WebBridge ready");
+    console.log("📡 Web Bridge script ready");
   </script>
 </body>
 </html>
