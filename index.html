@@ -21,6 +21,9 @@
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
           console.log("📤 Sent via ReactNativeWebView");
+        } else if (window.webkit?.messageHandlers?.webview?.postMessage) {
+          window.webkit.messageHandlers.webview.postMessage(msgText);
+          console.log("📤 Sent via webkit.messageHandlers");
         } else if (window.AndroidInterface?.postMessage) {
           window.AndroidInterface.postMessage(msgText);
           console.log("📤 Sent via AndroidInterface");
@@ -30,6 +33,7 @@
         }
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
+        console.log("🔍 Debug: ReactNativeWebView:", !!window.ReactNativeWebView, "webkit:", !!window.webkit, "AndroidInterface:", !!window.AndroidInterface);
       }
     }
 
