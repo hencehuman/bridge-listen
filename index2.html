@@ -15,7 +15,12 @@
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     let isSending = false; // Prevent send loops
     let isWebViewReady = false; // Track WebView readiness
-    let hasSubscribed = false; // Prevent subscription retries
+    let hasSubscribed = false; // Prevent subscription attempts
+
+    function isWebView() {
+      const ua = navigator.userAgent.toLowerCase();
+      return /android|iphone|ipad|mobile|webview/i.test(ua) && !/chrome|firefox|safari|edge/i.test(ua);
+    }
 
     function sendMessage(message) {
       if (isSending) {
@@ -36,8 +41,8 @@
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
         console.log("🔍 Debug: ReactNativeWebView:", !!window.ReactNativeWebView, "WebView Env:", navigator.userAgent);
-        if (!/Android|iPhone|iPad/i.test(navigator.userAgent)) {
-          console.warn("⚠️ Browser environment detected, suppressing errors");
+        if (!isWebView()) {
+          console.warn("⚠️ Non-WebView environment, suppressing errors");
         }
       } finally {
         isSending = false;
@@ -45,51 +50,32 @@
     }
 
     function checkWebViewReadiness(callback) {
-      const isAndroid = /Android/i.test(navigator.userAgent);
       const maxAttempts = 5;
       let attempts = 0;
 
       function poll() {
-        if (window.ReactNativeWebView || (isAndroid && attempts >= maxAttempts)) {
+        if (window.ReactNativeWebView || attempts >= maxAttempts) {
           isWebViewReady = true;
-          console.log("✅ WebView ready:", !!window.ReactNativeWebView, "Android:", isAndroid);
+          console.log("✅ WebView ready:", !!window.ReactNativeWebView);
           sendMessage({ status: "ready", message: "WebView initialized" });
           callback();
         } else {
           attempts++;
           console.log("🛠️ Polling WebView, attempt:", attempts);
-          if (attempts < maxAttempts) {
-            setTimeout(poll, 1000);
-          } else {
-            isWebViewReady = true;
-            console.warn("⚠️ WebView timeout, proceeding with fallback");
-            sendMessage({ status: "warning", message: "WebView timeout, using fallback" });
-            callback();
-          }
+          setTimeout(poll, 1000);
         }
       }
 
-      if (isAndroid) {
-        window.addEventListener("message", function androidReadyHandler(event) {
-          if (event.data === "androidReady") {
-            isWebViewReady = true;
-            console.log("✅ Android WebView ready via signal");
-            sendMessage({ status: "androidReady", message: "Android WebView initialized" });
-            window.removeEventListener("message", androidReadyHandler);
-            callback();
-          }
-        }, { once: true });
-      }
       poll();
     }
 
     function initializeBridge() {
       console.log("🛠️ Initializing WebBridge...");
-      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+      if (isWebView()) {
         sendMessage({ status: "init", message: "Bridge initializing" });
         checkWebViewReadiness(() => {});
       } else {
-        console.warn("⚠️ Browser environment detected, skipping initialization");
+        console.warn("⚠️ Non-WebView environment, skipping initialization");
       }
     }
 
@@ -123,6 +109,11 @@
     }
 
     window.addEventListener("message", async (event) => {
+      if (!isWebView()) {
+        console.warn("⚠️ Non-WebView environment, ignoring message:", event.data);
+        return;
+      }
+
       console.log("📩 Received message:", event.data);
       let data;
 
@@ -140,18 +131,13 @@
         return;
       }
 
-      if (!/Android|iPhone|iPad/i.test(navigator.userAgent)) {
-        console.warn("⚠️ Browser environment detected, skipping subscription");
-        return;
-      }
-
       if (!isWebViewReady) {
         console.warn("⚠️ WebView not ready, delaying subscription");
         checkWebViewReadiness(() => subscribeToChannel(data.token, data.channelName));
       } else {
         subscribeToChannel(data.token, data.channelName);
       }
-    });
+    }, { passive: true });
 
     initializeBridge();
     console.log("📡 WebBridge ready");
