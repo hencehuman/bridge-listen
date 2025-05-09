@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <title>Web Bridge Listener</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <meta http-equiv="Access-Control-Allow-Origin" content="*">
   <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js"></script>
 </head>
 <body>
@@ -12,45 +14,69 @@
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
 
-    // Handle incoming setup message from Thunkable Web Bridge
-    window.addEventListener("message", async (event) => {
-      console.log("📩 Received setup message:", event.data);
+    function sendMessage(message) {
+      const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
+      console.log("📤 Sending:", msgText);
+      try {
+        if (window.ReactNativeWebView?.postMessage) {
+          window.ReactNativeWebView.postMessage(msgText);
+          console.log("📤 Sent via ReactNativeWebView");
+        } else if (window.AndroidInterface?.postMessage) {
+          window.AndroidInterface.postMessage(msgText);
+          console.log("📤 Sent via AndroidInterface");
+        } else {
+          window.postMessage(msgText, "*");
+          console.log("📤 Sent via window.postMessage");
+        }
+      } catch (e) {
+        console.error("❌ Failed to send:", e.message);
+      }
+    }
 
+    window.addEventListener("message", async (event) => {
+      console.log("📩 Received message:", event.data);
       let data;
+
       try {
         data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
       } catch (e) {
-        console.error("❌ Invalid JSON:", e.message);
+        console.error("❌ Failed to parse JSON:", e.message);
+        sendMessage({ status: "error", message: "Invalid JSON format" });
         return;
       }
 
-      const { token, channelName } = data;
+      if (data.action === "testBridge") {
+        console.log("🛠️ Bridge test: Script loaded");
+        sendMessage("BridgeReady");
+        return;
+      }
+
+      const token = data.token;
+      const channelName = data.channelName;
 
       if (!token || !channelName) {
         console.warn("❌ Missing token or channelName");
+        sendMessage({ status: "error", message: "Missing token or channelName" });
         return;
       }
 
-      Backendless.initApp(APP_ID, API_KEY);
-      Backendless.UserService.setCurrentUserToken(token);
-
       try {
+        Backendless.initApp(APP_ID, API_KEY);
+        Backendless.UserService.setCurrentUserToken(token);
         const channel = Backendless.Messaging.subscribe(channelName);
         channel.addMessageListener((message) => {
-          const msg = typeof message === "object" ? JSON.stringify(message) : String(message);
-          console.log("📤 Broadcasting to Thunkable Web Bridge:", msg);
-
-          // ✅ Thunkable JS Web Bridge uses this for both iOS and Android
-          window.postMessage(msg, "*");
+          console.log("📤 Forwarding message:", message);
+          sendMessage(message);
         });
-
         console.log("✅ Subscribed to:", channelName);
+        sendMessage({ status: "success", message: `Listening on ${channelName}` });
       } catch (e) {
         console.error("❌ Subscription error:", e.message);
+        sendMessage({ status: "error", message: e.message });
       }
     });
 
-    console.log("📡 Web Bridge script ready");
+    console.log("📡 WebBridge ready");
   </script>
 </body>
 </html>
