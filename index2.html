@@ -14,12 +14,11 @@
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     let isSending = false; // Prevent send loops
-    let isWebViewReady = false; // Track WebView readiness
     let hasSubscribed = false; // Prevent subscription attempts
 
     function isWebView() {
       const ua = navigator.userAgent.toLowerCase();
-      return /android|iphone|ipad|mobile|webview/i.test(ua) && !/chrome|firefox|safari|edge/i.test(ua);
+      return /android|iphone|ipad|mobile|webview/i.test(ua);
     }
 
     function sendMessage(message) {
@@ -49,31 +48,10 @@
       }
     }
 
-    function checkWebViewReadiness(callback) {
-      const maxAttempts = 5;
-      let attempts = 0;
-
-      function poll() {
-        if (window.ReactNativeWebView || attempts >= maxAttempts) {
-          isWebViewReady = true;
-          console.log("✅ WebView ready:", !!window.ReactNativeWebView);
-          sendMessage({ status: "ready", message: "WebView initialized" });
-          callback();
-        } else {
-          attempts++;
-          console.log("🛠️ Polling WebView, attempt:", attempts);
-          setTimeout(poll, 1000);
-        }
-      }
-
-      poll();
-    }
-
     function initializeBridge() {
       console.log("🛠️ Initializing WebBridge...");
       if (isWebView()) {
         sendMessage({ status: "init", message: "Bridge initializing" });
-        checkWebViewReadiness(() => {});
       } else {
         console.warn("⚠️ Non-WebView environment, skipping initialization");
       }
@@ -93,6 +71,7 @@
       }
 
       try {
+        console.log("🔄 Attempting subscription with token:", token, "channel:", channelName);
         Backendless.initApp(APP_ID, API_KEY);
         Backendless.UserService.setCurrentUserToken(token);
         const channel = Backendless.Messaging.subscribe(channelName);
@@ -131,12 +110,7 @@
         return;
       }
 
-      if (!isWebViewReady) {
-        console.warn("⚠️ WebView not ready, delaying subscription");
-        checkWebViewReadiness(() => subscribeToChannel(data.token, data.channelName));
-      } else {
-        subscribeToChannel(data.token, data.channelName);
-      }
+      subscribeToChannel(data.token, data.channelName);
     }, { passive: true });
 
     initializeBridge();
