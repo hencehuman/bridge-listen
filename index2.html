@@ -13,8 +13,9 @@
   <script>
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
-    let isSending = false; // Prevent loop re-entry
+    let isSending = false; // Prevent send loops
     let isWebViewReady = false; // Track WebView readiness
+    let hasSubscribed = false; // Prevent subscription retries
 
     function sendMessage(message) {
       if (isSending) {
@@ -35,9 +36,7 @@
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
         console.log("🔍 Debug: ReactNativeWebView:", !!window.ReactNativeWebView, "WebView Env:", navigator.userAgent);
-        if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
-          console.warn("⚠️ WebView error, awaiting readiness");
-        } else {
+        if (!/Android|iPhone|iPad/i.test(navigator.userAgent)) {
           console.warn("⚠️ Browser environment detected, suppressing errors");
         }
       } finally {
@@ -86,11 +85,21 @@
 
     function initializeBridge() {
       console.log("🛠️ Initializing WebBridge...");
-      sendMessage({ status: "init", message: "Bridge initializing" });
-      checkWebViewReadiness(subscribeToChannel);
+      if (/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        sendMessage({ status: "init", message: "Bridge initializing" });
+        checkWebViewReadiness(() => {});
+      } else {
+        console.warn("⚠️ Browser environment detected, skipping initialization");
+      }
     }
 
     async function subscribeToChannel(token, channelName) {
+      if (hasSubscribed) {
+        console.warn("⚠️ Subscription already attempted, skipping");
+        return;
+      }
+      hasSubscribed = true;
+
       if (!token || !channelName) {
         console.warn("❌ Missing token or channelName");
         sendMessage({ status: "error", message: "Missing token or channelName" });
@@ -110,10 +119,6 @@
       } catch (e) {
         console.error("❌ Subscription error:", e.message);
         sendMessage({ status: "error", message: e.message });
-        if (!isWebViewReady) {
-          console.log("🔄 Retrying subscription after 2s");
-          setTimeout(() => subscribeToChannel(token, channelName), 2000);
-        }
       }
     }
 
@@ -132,6 +137,11 @@
       if (data.action === "testBridge") {
         console.log("🛠️ Bridge test: Script loaded");
         sendMessage("BridgeReady");
+        return;
+      }
+
+      if (!/Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        console.warn("⚠️ Browser environment detected, skipping subscription");
         return;
       }
 
