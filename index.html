@@ -90,7 +90,7 @@
         activeChannels.clear();
         hasSubscribed = false;
         console.log("✅ Unsubscribed from all channels");
-        sendMessage({ status: "unsubscribed", message: "Stopped listening to all channels" });
+        sendMessage({ status: "unsubscribed", message: "Stopped listening" });
       } catch (e) {
         console.error("❌ Unsubscribe error:", e.message);
         sendMessage({ status: "error", message: e.message });
