@@ -66,7 +66,7 @@
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
-        sendMessage({ status: "success", message: `Listening on ${channelName}` });
+        sendMessage({ status: "success", message: `Listening with User: ${channelName}` });
       } catch (e) {
         console.error("❌ Subscription error:", e.message);
         sendMessage({ status: "error", message: e.message });
@@ -90,7 +90,7 @@
         activeChannels.clear();
         hasSubscribed = false;
         console.log("✅ Unsubscribed from all channels");
-        sendMessage({ status: "unsubscribed", message: "Stopped listening to all channels" });
+        sendMessage({ status: "unsubscribed", message: "Stopped listening" });
       } catch (e) {
         console.error("❌ Unsubscribe error:", e.message);
         sendMessage({ status: "error", message: e.message });
