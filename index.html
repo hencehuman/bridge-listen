@@ -13,7 +13,6 @@
   <script>
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
-    let hasSubscribed = false; // Prevent multiple subscriptions
     const activeChannels = new Map(); // Store all active channels
 
     function sendMessage(message, retryCount = 0) {
@@ -41,17 +40,15 @@
     }
 
     async function subscribeToChannel(token, channelName) {
-      if (hasSubscribed) {
-        console.warn("⚠️ Subscription already attempted, skipping");
-        sendMessage({ status: "error", message: "Already subscribed" });
-        return;
-      }
-      hasSubscribed = true;
-
       if (!token || !channelName) {
         console.warn("❌ Missing token or channelName");
         sendMessage({ status: "error", message: "Missing token or channelName" });
-        hasSubscribed = false;
+        return;
+      }
+
+      if (activeChannels.has(channelName)) {
+        console.warn("⚠️ Already subscribed to:", channelName);
+        sendMessage({ status: "error", message: `Already listening with ${channelName}` });
         return;
       }
 
@@ -61,17 +58,35 @@
         Backendless.UserService.setCurrentUserToken(token);
         const channel = Backendless.Messaging.subscribe(channelName);
         channel.addMessageListener((message) => {
-          console.log("📤 Forwarding message:", message);
-          sendMessage(message);
+          console.log("📤 Forwarding message from channel:", channelName, "message:", message);
+          sendMessage({ channelName: channelName, response: message });
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
-        sendMessage({ status: "success", message: `Listening with User: ${channelName}` });
+        sendMessage({ status: "success", message: `Now Listening with ${channelName}` });
       } catch (e) {
         console.error("❌ Subscription error:", e.message);
         sendMessage({ status: "error", message: e.message });
-        hasSubscribed = false;
         activeChannels.delete(channelName);
+      }
+    }
+
+    function unsubscribeFromChannel(channelName) {
+      if (!activeChannels.has(channelName)) {
+        console.warn("⚠️ Not subscribed to:", channelName);
+        sendMessage({ status: "error", message: `Channel ${channelName} not found` });
+        return;
+      }
+
+      try {
+        const channel = activeChannels.get(channelName);
+        channel.removeAllMessageListeners();
+        activeChannels.delete(channelName);
+        console.log("🛑 Unsubscribed from:", channelName, "Remaining channels:", activeChannels.size);
+        sendMessage({ status: "unsubscribed", message: `Stopped listening with ${channelName}` });
+      } catch (e) {
+        console.error("❌ Unsubscribe error for:", channelName, e.message);
+        sendMessage({ status: "error", message: e.message });
       }
     }
 
@@ -88,9 +103,8 @@
           console.log("🛑 Unsubscribed from:", channelName);
         }
         activeChannels.clear();
-        hasSubscribed = false;
         console.log("✅ Unsubscribed from all channels");
-        sendMessage({ status: "unsubscribed", message: "Stopped listening" });
+        sendMessage({ status: "unsubscribed", message: "Stopped listening with all users" });
       } catch (e) {
         console.error("❌ Unsubscribe error:", e.message);
         sendMessage({ status: "error", message: e.message });
@@ -118,6 +132,11 @@
 
       if (data.action === "unsubscribe") {
         unsubscribeFromAllChannels();
+        return;
+      }
+
+      if (data.action === "unsubscribeChannel" && data.channelName) {
+        unsubscribeFromChannel(data.channelName);
         return;
       }
 
