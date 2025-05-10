@@ -16,11 +16,6 @@
     let isSending = false; // Prevent send loops
     let hasSubscribed = false; // Prevent subscription attempts
 
-    function isWebView() {
-      const ua = navigator.userAgent.toLowerCase();
-      return /android|iphone|ipad|mobile|webview/i.test(ua);
-    }
-
     function sendMessage(message) {
       if (isSending) {
         console.warn("⚠️ Send skipped: Previous send in progress");
@@ -37,12 +32,10 @@
           window.postMessage(msgText, "*");
           console.log("📤 SENT via window.postMessage");
         }
+        console.log("🔍 Debug: UserAgent:", navigator.userAgent, "ReactNativeWebView:", !!window.ReactNativeWebView);
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
-        console.log("🔍 Debug: ReactNativeWebView:", !!window.ReactNativeWebView, "WebView Env:", navigator.userAgent);
-        if (!isWebView()) {
-          console.warn("⚠️ Non-WebView environment, suppressing errors");
-        }
+        console.log("🔍 Debug: Error context:", navigator.userAgent, "ReactNativeWebView:", !!window.ReactNativeWebView);
       } finally {
         isSending = false;
       }
@@ -50,11 +43,7 @@
 
     function initializeBridge() {
       console.log("🛠️ Initializing WebBridge...");
-      if (isWebView()) {
-        sendMessage({ status: "init", message: "Bridge initializing" });
-      } else {
-        console.warn("⚠️ Non-WebView environment, skipping initialization");
-      }
+      sendMessage({ status: "init", message: "Bridge initializing" });
     }
 
     async function subscribeToChannel(token, channelName) {
@@ -71,7 +60,7 @@
       }
 
       try {
-        console.log("🔄 Attempting subscription with token:", token, "channel:", channelName);
+        console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
         Backendless.initApp(APP_ID, API_KEY);
         Backendless.UserService.setCurrentUserToken(token);
         const channel = Backendless.Messaging.subscribe(channelName);
@@ -88,16 +77,12 @@
     }
 
     window.addEventListener("message", async (event) => {
-      if (!isWebView()) {
-        console.warn("⚠️ Non-WebView environment, ignoring message:", event.data);
-        return;
-      }
-
-      console.log("📩 Received message:", event.data);
+      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin);
       let data;
 
       try {
         data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        console.log("🔍 Parsed data:", data);
       } catch (e) {
         console.error("❌ Failed to parse JSON:", e.message);
         sendMessage({ status: "error", message: "Invalid JSON format" });
