@@ -17,7 +17,20 @@
     const activeChannels = new Map(); // Store all active channels
 
     function sendMessage(message, retryCount = 0) {
-      const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
+      let msgToSend = message;
+      // Check if message is a Backendless response with a message property
+      if (typeof message === 'object' && message.messageId && typeof message.message === 'string') {
+        try {
+          console.log("🔍 Parsing message string:", message.message.slice(0, 50) + "...");
+          msgToSend = JSON.parse(message.message);
+          console.log("✅ Parsed message object:", msgToSend);
+        } catch (e) {
+          console.error("❌ Failed to parse message string:", e.message);
+          msgToSend = { status: "error", message: "Failed to parse message" };
+        }
+      }
+
+      const msgText = typeof msgToSend === "object" ? JSON.stringify(msgToSend) : String(msgToSend);
       console.log("📤 Sending:", msgText);
       try {
         if (window.ReactNativeWebView?.postMessage) {
@@ -66,7 +79,7 @@
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
-        sendMessage({ status: "success", message: `Listening with User: ${channelName}` });
+        sendMessage({ status: "success", message: `Listening on ${channelName}` });
       } catch (e) {
         console.error("❌ Subscription error:", e.message);
         sendMessage({ status: "error", message: e.message });
@@ -90,7 +103,7 @@
         activeChannels.clear();
         hasSubscribed = false;
         console.log("✅ Unsubscribed from all channels");
-        sendMessage({ status: "unsubscribed", message: "Stopped listening" });
+        sendMessage({ status: "unsubscribed", message: "Stopped listening to all channels" });
       } catch (e) {
         console.error("❌ Unsubscribe error:", e.message);
         sendMessage({ status: "error", message: e.message });
