@@ -48,7 +48,7 @@
 
       if (activeChannels.has(channelName)) {
         console.warn("⚠️ Already subscribed to:", channelName);
-        sendMessage({ status: "error", message: `Already listening with ${channelName}` });
+        sendMessage({ status: "error", message: `Already listening wit ${channelName}` });
         return;
       }
 
@@ -63,7 +63,7 @@
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
-        sendMessage({ status: "success", message: `Now Listening with ${channelName}` });
+        sendMessage({ status: "success", message: `Now listening wit ${channelName}` });
       } catch (e) {
         console.error("❌ Subscription error:", e.message);
         sendMessage({ status: "error", message: e.message });
@@ -83,7 +83,7 @@
         channel.removeAllMessageListeners();
         activeChannels.delete(channelName);
         console.log("🛑 Unsubscribed from:", channelName, "Remaining channels:", activeChannels.size);
-        sendMessage({ status: "unsubscribed", message: `Stopped listening with ${channelName}` });
+        sendMessage({ status: "unsubscribed", message: `Stopped listening wit ${channelName}` });
       } catch (e) {
         console.error("❌ Unsubscribe error for:", channelName, e.message);
         sendMessage({ status: "error", message: e.message });
@@ -93,7 +93,7 @@
     function unsubscribeFromAllChannels() {
       if (activeChannels.size === 0) {
         console.warn("⚠️ No active subscriptions to unsubscribe from");
-        sendMessage({ status: "error", message: "No active subscriptions" });
+        sendMessage({ status: "error", message: "No active listening wits" });
         return;
       }
 
@@ -104,7 +104,7 @@
         }
         activeChannels.clear();
         console.log("✅ Unsubscribed from all channels");
-        sendMessage({ status: "unsubscribed", message: "Stopped listening with all users" });
+        sendMessage({ status: "unsubscribed", message: "Stopped listening wit all users" });
       } catch (e) {
         console.error("❌ Unsubscribe error:", e.message);
         sendMessage({ status: "error", message: e.message });
