@@ -18,6 +18,9 @@
     function sendMessage(message, retryCount = 0) {
       const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
       console.log("📤 Sending:", msgText);
+      if (message.headers) {
+        console.log("🔍 Headers:", message.headers);
+      }
       try {
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
@@ -59,7 +62,7 @@
         const channel = Backendless.Messaging.subscribe(channelName);
         channel.addMessageListener((message) => {
           console.log("📤 Forwarding message from channel:", channelName, "message:", message);
-          sendMessage({ channelName: channelName, response: message });
+          sendMessage(message);
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
