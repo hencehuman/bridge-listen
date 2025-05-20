@@ -15,8 +15,6 @@
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map(); // Store all active channels
 
-    Backendless.initApp(APP_ID, API_KEY); // Initialize once at the top
-
     function sendMessage(message, retryCount = 0) {
       const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
       console.log("📤 Sending:", msgText);
@@ -59,31 +57,12 @@
 
       try {
         console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
-        const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
-        Backendless.UserService.setCurrentUserToken(cleanToken);
-        const currentUser = await Backendless.UserService.getCurrentUser();
-        console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
-        if (!currentUser) {
-          throw new Error("Failed to set user context with token");
-        }
-
-        let channel;
-        try {
-          channel = Backendless.Messaging.subscribe(channelName);
-        } catch (subscribeError) {
-          console.error("❌ Subscription failure details:", subscribeError.message, subscribeError.code);
-          throw new Error(`Subscription failed: ${subscribeError.message}`);
-        }
-
+        Backendless.initApp(APP_ID, API_KEY);
+        Backendless.UserService.setCurrentUserToken(token);
+        const channel = Backendless.Messaging.subscribe(channelName);
         channel.addMessageListener((message) => {
           console.log("📤 Forwarding message from channel:", channelName, "message:", message);
           sendMessage(message);
-        });
-        channel.addConnectListener(() => {
-          console.log("🔗 WebSocket connected for channel:", channelName);
-        });
-        channel.addDisconnectListener((error) => {
-          console.error("🔌 WebSocket disconnected for channel:", channelName, "Error:", error);
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
