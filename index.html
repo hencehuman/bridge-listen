@@ -13,7 +13,7 @@
   <script>
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
-    const activeChannels = new Map();
+    const activeChannels = new Map(); // Store all active channels
 
     Backendless.initApp(APP_ID, API_KEY); // Initialize once at the top
 
@@ -60,24 +60,6 @@
       try {
         console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
         const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
-        const tokenValidationResponse = await fetch(`https://optimumrespect-us.backendless.app/api/users/isvalidusertoken/${cleanToken}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "application-id": APP_ID,
-            "secret-key": API_KEY,
-          },
-        });
-        console.log("🔍 Token validation response status:", tokenValidationResponse.status);
-        console.log("🔍 Token validation response text:", await tokenValidationResponse.text());
-        const isValidToken = await tokenValidationResponse.json();
-        console.log("🔍 Token validation via API (parsed):", isValidToken);
-        if (!tokenValidationResponse.ok) {
-          throw new Error(`Token validation request failed: ${tokenValidationResponse.status}`);
-        }
-        if (!isValidToken) {
-          throw new Error("Invalid user token");
-        }
         Backendless.UserService.setCurrentUserToken(cleanToken);
         const currentUser = await Backendless.UserService.getCurrentUser();
         console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
@@ -154,7 +136,7 @@
     }
 
     window.addEventListener("message", async (event) => {
-      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin");
+      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin);
       let data;
 
       try {
