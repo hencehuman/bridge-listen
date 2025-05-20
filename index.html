@@ -15,6 +15,8 @@
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map();
 
+    Backendless.initApp(APP_ID, API_KEY); // Initialize once at the top
+
     function sendMessage(message, retryCount = 0) {
       const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
       console.log("📤 Sending:", msgText);
@@ -57,16 +59,40 @@
 
       try {
         console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
-        Backendless.initApp(APP_ID, API_KEY);
-        Backendless.UserService.setCurrentUserToken(token);
-        const isValidLogin = await Backendless.UserService.isValidLogin();
-        console.log("🔍 Token validation:", isValidLogin);
-        if (!isValidLogin) {
+        const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
+        const tokenValidationResponse = await fetch(`https://optimumrespect-us.backendless.app/api/users/isvalidusertoken/${cleanToken}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "application-id": APP_ID,
+            "secret-key": API_KEY,
+          },
+        });
+        console.log("🔍 Token validation response status:", tokenValidationResponse.status);
+        console.log("🔍 Token validation response text:", await tokenValidationResponse.text());
+        const isValidToken = await tokenValidationResponse.json();
+        console.log("🔍 Token validation via API (parsed):", isValidToken);
+        if (!tokenValidationResponse.ok) {
+          throw new Error(`Token validation request failed: ${tokenValidationResponse.status}`);
+        }
+        if (!isValidToken) {
           throw new Error("Invalid user token");
         }
+        Backendless.UserService.setCurrentUserToken(cleanToken);
         const currentUser = await Backendless.UserService.getCurrentUser();
-        console.log("🔍 Current user:", currentUser ? currentUser.email : "No user");
-        const channel = Backendless.Messaging.subscribe(channelName);
+        console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
+        if (!currentUser) {
+          throw new Error("Failed to set user context with token");
+        }
+
+        let channel;
+        try {
+          channel = Backendless.Messaging.subscribe(channelName);
+        } catch (subscribeError) {
+          console.error("❌ Subscription failure details:", subscribeError.message, subscribeError.code);
+          throw new Error(`Subscription failed: ${subscribeError.message}`);
+        }
+
         channel.addMessageListener((message) => {
           console.log("📤 Forwarding message from channel:", channelName, "message:", message);
           sendMessage(message);
@@ -128,7 +154,7 @@
     }
 
     window.addEventListener("message", async (event) => {
-      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin);
+      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin");
       let data;
 
       try {
