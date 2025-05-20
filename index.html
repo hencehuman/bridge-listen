@@ -13,7 +13,7 @@
   <script>
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
-    const activeChannels = new Map(); // Store all active channels
+    const activeChannels = new Map();
 
     function sendMessage(message, retryCount = 0) {
       const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
@@ -59,10 +59,23 @@
         console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
         Backendless.initApp(APP_ID, API_KEY);
         Backendless.UserService.setCurrentUserToken(token);
+        const isValidLogin = await Backendless.UserService.isValidLogin();
+        console.log("🔍 Token validation:", isValidLogin);
+        if (!isValidLogin) {
+          throw new Error("Invalid user token");
+        }
+        const currentUser = await Backendless.UserService.getCurrentUser();
+        console.log("🔍 Current user:", currentUser ? currentUser.email : "No user");
         const channel = Backendless.Messaging.subscribe(channelName);
         channel.addMessageListener((message) => {
           console.log("📤 Forwarding message from channel:", channelName, "message:", message);
           sendMessage(message);
+        });
+        channel.addConnectListener(() => {
+          console.log("🔗 WebSocket connected for channel:", channelName);
+        });
+        channel.addDisconnectListener((error) => {
+          console.error("🔌 WebSocket disconnected for channel:", channelName, "Error:", error);
         });
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
