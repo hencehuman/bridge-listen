@@ -5,13 +5,14 @@
   <title>Web Bridge Listener</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <meta http-equiv="Access-Control-Allow-Origin" content="*">
-  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js"></script>
+  <!-- Added cache-busting query parameter to ensure latest SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522"></script>
 </head>
 <body>
   <h2>Listening Bridge Active</h2>
 
   <script>
-    console.log("📡 Script loading started on iOS");
+    console.log("📡 Script loading started on iOS - Version 20250522");
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map(); // Store all active channels
@@ -74,21 +75,23 @@
           throw new Error(`Subscription failed: ${subscribeError.message}`);
         }
 
+        // Validate listener methods before calling
+        if (typeof channel.addMessageListener !== "function") {
+          throw new Error("addMessageListener is not a function on channel object");
+        }
         channel.addMessageListener((message) => {
           console.log("📤 Forwarding message from channel:", channelName, "message:", message);
           console.log("🔍 Message details:", JSON.stringify(message));
           sendMessage(message);
         });
 
-        channel.addConnectListener(() => {
-          console.log("🔗 WebSocket connected for channel:", channelName);
-        });
-
-        // Temporarily removed addDisconnectListener due to undefined function error
-        // channel.addDisconnectListener((error) => {
-        //   console.error("🔌 WebSocket disconnected for channel:", channelName, "Error:", error);
-        //   sendMessage({ status: "error", message: `WebSocket disconnected for ${channelName}: ${error}` });
-        // });
+        if (typeof channel.addConnectListener === "function") {
+          channel.addConnectListener(() => {
+            console.log("🔗 WebSocket connected for channel:", channelName);
+          });
+        } else {
+          console.warn("⚠️ addConnectListener not supported in this Backendless SDK version");
+        }
 
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
@@ -141,7 +144,7 @@
     }
 
     window.addEventListener("message", async (event) => {
-      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin");
+      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin);
       let data;
 
       try {
@@ -172,7 +175,7 @@
       subscribeToChannel(data.channelName);
     }, { passive: true });
 
-    console.log("📡 WebBridge ready on iOS");
+    console.log("📡 WebBridge ready on iOS - Version 20250522");
   </script>
 </body>
 </html>
