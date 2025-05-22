@@ -11,9 +11,17 @@
   <h2>Listening Bridge Active</h2>
 
   <script>
+    console.log("📡 Script loading started");
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map(); // Store all active channels
+
+    try {
+      Backendless.initApp(APP_ID, API_KEY);
+      console.log("📡 Backendless initialized successfully");
+    } catch (initError) {
+      console.error("❌ Backendless initialization failed:", initError.message);
+    }
 
     function sendMessage(message, retryCount = 0) {
       const msgText = typeof message === "object" ? JSON.stringify(message) : String(message);
@@ -57,13 +65,38 @@
 
       try {
         console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
-        Backendless.initApp(APP_ID, API_KEY);
-        Backendless.UserService.setCurrentUserToken(token);
-        const channel = Backendless.Messaging.subscribe(channelName);
+        const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
+        Backendless.UserService.setCurrentUserToken(cleanToken);
+        const currentUser = await Backendless.UserService.getCurrentUser();
+        console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
+        if (!currentUser) {
+          throw new Error("Failed to set user context with token");
+        }
+
+        let channel;
+        try {
+          channel = Backendless.Messaging.subscribe(channelName);
+          console.log("🔍 Subscription attempt completed for:", channelName);
+        } catch (subscribeError) {
+          console.error("❌ Subscription failure details:", subscribeError.message, subscribeError.code);
+          throw new Error(`Subscription failed: ${subscribeError.message}`);
+        }
+
         channel.addMessageListener((message) => {
           console.log("📤 Forwarding message from channel:", channelName, "message:", message);
+          console.log("🔍 Message details:", JSON.stringify(message));
           sendMessage(message);
         });
+
+        channel.addConnectListener(() => {
+          console.log("🔗 WebSocket connected for channel:", channelName);
+        });
+
+        channel.addDisconnectListener((error) => {
+          console.error("🔌 WebSocket disconnected for channel:", channelName, "Error:", error);
+          sendMessage({ status: "error", message: `WebSocket disconnected for ${channelName}: ${error}` });
+        });
+
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName, "Active channels:", activeChannels.size);
         sendMessage({ status: "success", message: `Now listening wit ${channelName}` });
