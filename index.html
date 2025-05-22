@@ -5,14 +5,14 @@
   <title>Web Bridge Listener</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net https://*.backendless.app; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <meta http-equiv="Access-Control-Allow-Origin" content="*">
-  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-12"></script>
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-13"></script>
 </head>
 <body>
   <h2>Listening Bridge Active</h2>
 
   <script>
     const platform = navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad") ? "iOS" : "Web";
-    console.log("📡 Script loading started on", platform, "- Version 20250522-12");
+    console.log("📡 Script loading started on", platform, "- Version 20250522-13");
 
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
@@ -28,7 +28,7 @@
 
     function sendMessage(message) {
       const msgText = typeof message === "object" ? JSON.stringify(message) : message;
-      console.log("📤 Sending:", msgText);
+      console.log("📤 Attempting to send:", msgText);
       try {
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
@@ -37,7 +37,7 @@
           window.parent.postMessage(msgText, "*");
           console.log("📤 Sent via parent.postMessage (likely Web)");
         } else {
-          console.warn("⚠️ No postMessage method available");
+          console.error("⚠️ No postMessage method available");
         }
       } catch (e) {
         console.error("❌ Failed to send:", e.message);
@@ -63,7 +63,7 @@
       try {
         console.log("🔄 Attempting subscription to channel:", channelName);
         const channel = Backendless.Messaging.subscribe(channelName);
-        console.log("🔍 Channel object created:", Object.keys(channel).join(", "));
+        console.log("🔍 Channel object created with methods:", Object.keys(channel).join(", "));
 
         if (typeof channel.addMessageListener !== "function") {
           throw new Error("addMessageListener is not available on channel");
@@ -72,7 +72,7 @@
           console.log("📥 Message received on", platform, "from", channelName, ":", message);
           sendMessage(message);
         });
-        console.log("✅ WebSocket listener attached to:", channelName);
+        console.log("✅ Listener attached to:", channelName);
 
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName);
@@ -80,14 +80,19 @@
       } catch (e) {
         console.error("❌ Subscription error:", e.message, "Stack:", e.stack);
         sendMessage({ status: "error", message: e.message });
-        if (activeChannels.has(channelName)) activeChannels.delete(channelName);
       }
     }
 
     window.addEventListener("message", (event) => {
       console.log("📩 Received event on", platform, ":", event.data);
       try {
-        const data = typeof event.data === "string" ? JSON.stringify(JSON.parse(event.data)) : JSON.stringify(event.data);
+        let data;
+        try {
+          data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        } catch (parseError) {
+          console.error("❌ Parsing error:", parseError.message);
+          data = event.data; // Fallback to raw data if parsing fails
+        }
         console.log("🔍 Parsed data:", data);
 
         if (data.action === "testBridge") {
@@ -119,7 +124,7 @@
       }
     }, false);
 
-    console.log("📡 WebBridge ready on", platform, "- Version 20250522-12");
+    console.log("📡 WebBridge ready on", platform, "- Version 20250522-13");
   </script>
 </body>
 </html>
