@@ -12,7 +12,7 @@
   <h2>Listening Bridge Active</h2>
 
   <script>
-    console.log("📡 Script loading started on iOS - Version 20250522");
+    console.log("📡 Script loading started on iOS - Version 20250522-2");
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map(); // Store all active channels
@@ -105,77 +105,4 @@
 
     function unsubscribeFromChannel(channelName) {
       if (!activeChannels.has(channelName)) {
-        console.warn("⚠️ Not subscribed to:", channelName);
-        sendMessage({ status: "error", message: `Channel ${channelName} not found` });
-        return;
-      }
-
-      try {
-        const channel = activeChannels.get(channelName);
-        channel.removeAllMessageListeners();
-        activeChannels.delete(channelName);
-        console.log("🛑 Unsubscribed from:", channelName, "Remaining channels:", activeChannels.size);
-        sendMessage({ status: "unsubscribed", message: `Stopped listening wit ${channelName}` });
-      } catch (e) {
-        console.error("❌ Unsubscribe error for:", channelName, e.message);
-        sendMessage({ status: "error", message: e.message });
-      }
-    }
-
-    function unsubscribeFromAllChannels() {
-      if (activeChannels.size === 0) {
-        console.warn("⚠️ No active subscriptions to unsubscribe from");
-        sendMessage({ status: "error", message: "No active listening wits" });
-        return;
-      }
-
-      try {
-        for (const [channelName, channel] of activeChannels) {
-          channel.removeAllMessageListeners();
-          console.log("🛑 Unsubscribed from:", channelName);
-        }
-        activeChannels.clear();
-        console.log("✅ Unsubscribed from all channels");
-        sendMessage({ status: "unsubscribed", message: "Stopped listening wit all users" });
-      } catch (e) {
-        console.error("❌ Unsubscribe error:", e.message);
-        sendMessage({ status: "error", message: e.message });
-      }
-    }
-
-    window.addEventListener("message", async (event) => {
-      console.log("📩 Received message:", event.data, "Source:", event.source, "Origin:", event.origin);
-      let data;
-
-      try {
-        data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        console.log("🔍 Parsed data:", data);
-      } catch (e) {
-        console.error("❌ Failed to parse JSON:", e.message);
-        sendMessage({ status: "error", message: "Invalid JSON format" });
-        return;
-      }
-
-      if (data.action === "testBridge") {
-        console.log("🛠️ Bridge test: Script loaded");
-        sendMessage("BridgeReady");
-        return;
-      }
-
-      if (data.action === "unsubscribe") {
-        unsubscribeFromAllChannels();
-        return;
-      }
-
-      if (data.action === "unsubscribeChannel" && data.channelName) {
-        unsubscribeFromChannel(data.channelName);
-        return;
-      }
-
-      subscribeToChannel(data.channelName);
-    }, { passive: true });
-
-    console.log("📡 WebBridge ready on iOS - Version 20250522");
-  </script>
-</body>
-</html>
+        console.warn("⚠️ Not subscribed to:",
