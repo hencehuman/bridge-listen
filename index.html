@@ -64,14 +64,14 @@
       }
 
       try {
-        console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
+        console.log("🔄 Attempting subscription with raw token:", token.slice(0, 10) + "...", "channel:", channelName);
         const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
-        console.log("🔍 Cleaned token length:", cleanToken.length);
+        console.log("🔍 Cleaned token:", cleanToken.slice(0, 10) + "...", "length:", cleanToken.length);
         Backendless.UserService.setCurrentUserToken(cleanToken);
         const currentUser = await Backendless.UserService.getCurrentUser();
         console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
         if (!currentUser) {
-          throw new Error("Failed to set user context with token. Token might be invalid or expired.");
+          throw new Error("Failed to set user context with token. Token might be invalid, expired, or mismatched.");
         }
 
         let channel;
