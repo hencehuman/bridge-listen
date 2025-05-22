@@ -5,15 +5,14 @@
   <title>Web Bridge Listener</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net https://*.backendless.app; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <meta http-equiv="Access-Control-Allow-Origin" content="*">
-  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-9"></script>
 </head>
 <body>
   <h2>Listening Bridge Active</h2>
 
   <script>
-    // Detect platform dynamically
     const platform = navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad") ? "iOS" : "Web";
-    console.log("📡 Script loading started on", platform, "- Version 20250522-6");
+    console.log("📡 Script loading started on", platform, "- Version 20250522-9");
 
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
@@ -56,30 +55,41 @@
       }
 
       try {
-        console.log("🔄 Subscribing to channel:", channelName);
+        console.log("🔄 Attempting subscription to channel:", channelName);
         const channel = Backendless.Messaging.subscribe(channelName);
+        console.log("🔍 Channel object created:", Object.keys(channel).join(", "));
+
+        if (typeof channel.addMessageListener !== "function") {
+          throw new Error("addMessageListener is not available on channel");
+        }
         channel.addMessageListener((message) => {
-          console.log("📥 Received message:", message);
+          console.log("📥 Message received on", platform, "from", channelName, ":", message);
           sendMessage(message);
         });
+        console.log("✅ Listener attached to:", channelName);
+
+        setInterval(() => {
+          console.log("🔍 Checking connection for", channelName, "active:", activeChannels.has(channelName));
+        }, 5000);
+
         activeChannels.set(channelName, channel);
         console.log("✅ Subscribed to:", channelName);
         sendMessage({ status: "success", message: `Now listening to ${channelName}` });
       } catch (e) {
-        console.error("❌ Subscription error:", e.message);
+        console.error("❌ Subscription error:", e.message, "Stack:", e.stack);
         sendMessage({ status: "error", message: e.message });
         if (activeChannels.has(channelName)) activeChannels.delete(channelName);
       }
     }
 
     window.addEventListener("message", (event) => {
-      console.log("📩 Received event:", event.data);
+      console.log("📩 Received event on", platform, ":", event.data);
       try {
         const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
         console.log("🔍 Parsed data:", data);
 
         if (data.action === "testBridge") {
-          console.log("🛠️ Bridge test successful");
+          console.log("🛠️ Bridge test successful on", platform);
           sendMessage("BridgeReady");
           return;
         }
@@ -89,12 +99,12 @@
           return;
         }
       } catch (e) {
-        console.error("❌ Event processing error:", e.message);
+        console.error("❌ Event processing error on", platform, ":", e.message);
         sendMessage({ status: "error", message: "Invalid message format" });
       }
     }, false);
 
-    console.log("📡 WebBridge ready on", platform, "- Version 20250522-6");
+    console.log("📡 WebBridge ready on", platform, "- Version 20250522-9");
   </script>
 </body>
 </html>
