@@ -11,14 +11,14 @@
   <h2>Listening Bridge Active</h2>
 
   <script>
-    console.log("📡 Script loading started");
+    console.log("📡 Script loading started on iOS");
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map(); // Store all active channels
 
     try {
       Backendless.initApp(APP_ID, API_KEY);
-      console.log("📡 Backendless initialized successfully");
+      console.log("📡 Backendless initialized successfully with APP_ID:", APP_ID, "API_KEY:", API_KEY.slice(0, 10) + "...");
     } catch (initError) {
       console.error("❌ Backendless initialization failed:", initError.message);
     }
@@ -32,7 +32,7 @@
       try {
         if (window.ReactNativeWebView?.postMessage) {
           window.ReactNativeWebView.postMessage(msgText);
-          console.log("📤 Sent via ReactNativeWebView");
+          console.log("📤 Sent via ReactNativeWebView on iOS");
         } else {
           window.postMessage(msgText, "*");
           console.log("📤 Sent via window.postMessage");
@@ -66,11 +66,12 @@
       try {
         console.log("🔄 Attempting subscription with token:", token.slice(0, 10) + "...", "channel:", channelName);
         const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
+        console.log("🔍 Cleaned token length:", cleanToken.length);
         Backendless.UserService.setCurrentUserToken(cleanToken);
         const currentUser = await Backendless.UserService.getCurrentUser();
         console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
         if (!currentUser) {
-          throw new Error("Failed to set user context with token");
+          throw new Error("Failed to set user context with token. Token might be invalid or expired.");
         }
 
         let channel;
@@ -179,7 +180,7 @@
       subscribeToChannel(data.token, data.channelName);
     }, { passive: true });
 
-    console.log("📡 WebBridge ready");
+    console.log("📡 WebBridge ready on iOS");
   </script>
 </body>
 </html>
