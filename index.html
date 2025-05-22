@@ -55,7 +55,7 @@
       }
 
       if (activeChannels.has(channelName)) {
-        sendMessage({ status: "error", message: `Already listening to ${channelName}` });
+        sendMessage({ status: "error", message: `Already listening w/ ${channelName}` });
         return;
       }
 
@@ -82,7 +82,7 @@
 
             activeChannels.set(channelName, channel);
             console.log("✅ Subscribed to:", channelName);
-            sendMessage({ status: "success", message: `Now listening to ${channelName}` });
+            sendMessage({ status: "success", message: `Now listening w/ ${channelName}` });
           } catch (e) {
             console.error("❌ Subscription error:", e.message, "Stack:", e.stack);
             sendMessage({ status: "error", message: e.message });
