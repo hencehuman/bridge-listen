@@ -5,22 +5,17 @@
 </head>
 <body>
   <script>
-    const APP_ID = "YOUR-BACKENDLESS-APP-ID";
-    const SUBSCRIBE_API_KEY = "YOUR-SUBSCRIBE-API-KEY";
+    const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
+    const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
 
-    async function subscribeToChannel(channelName, token) {
+    function startListening(channelName, token) {
       try {
-        console.log("🧪 Backendless script starting...");
-
-        // Step 1: Init Backendless FIRST
-        Backendless.initApp(APP_ID, SUBSCRIBE_API_KEY);
+        Backendless.initApp(APP_ID, API_KEY);
         console.log("✅ Backendless initialized");
 
-        // Step 2: Set current user token
         Backendless.UserService.setCurrentUserToken(token);
         console.log("🔑 Token set:", token);
 
-        // Step 3: Subscribe to the real-time channel
         const rt = Backendless.Messaging.subscribe(channelName);
 
         rt.addMessageListener(function(message) {
@@ -28,20 +23,32 @@
           window.ReactNativeWebView?.postMessage(message.message);
         });
 
-        rt.on("connect", () => console.log("✅ Connected to channel:", channelName));
+        rt.on("connect", () => {
+          console.log(`✅ Now Listening with ${channelName}`);
+          window.ReactNativeWebView?.postMessage(`Now Listening with ${channelName}`);
+        });
+
         rt.on("disconnect", () => console.log("⚠️ Disconnected from channel"));
         rt.on("fault", (err) => console.error("❌ RT fault:", err.message));
-
       } catch (e) {
         console.error("❌ Script error:", e.stack || e.message);
       }
     }
 
-    // Replace with dynamic values in production
-    const channelName = "exampleChannel";
-    const token = "USER-TOKEN-HERE";
-
-    subscribeToChannel(channelName, token);
+    // Listen for token & channel passed from Thunkable or parent app
+    window.addEventListener("message", (event) => {
+      try {
+        const data = typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        const { token, channelName } = data;
+        if (token && channelName) {
+          startListening(channelName, token);
+        } else {
+          console.error("❗ Missing token or channelName");
+        }
+      } catch (err) {
+        console.error("❗ Invalid message format:", err.message);
+      }
+    });
   </script>
 </body>
 </html>
