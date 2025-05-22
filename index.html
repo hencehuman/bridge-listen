@@ -50,10 +50,10 @@
       }
     }
 
-    async function subscribeToChannel(token, channelName) {
-      if (!token || !channelName) {
-        console.warn("❌ Missing token or channelName");
-        sendMessage({ status: "error", message: "Missing token or channelName" });
+    async function subscribeToChannel(channelName) {
+      if (!channelName) {
+        console.warn("❌ Missing channelName");
+        sendMessage({ status: "error", message: "Missing channelName" });
         return;
       }
 
@@ -64,16 +64,7 @@
       }
 
       try {
-        console.log("🔄 Attempting subscription with raw token:", token.slice(0, 10) + "...", "channel:", channelName);
-        const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
-        console.log("🔍 Cleaned token:", cleanToken.slice(0, 10) + "...", "length:", cleanToken.length);
-        Backendless.UserService.setCurrentUserToken(cleanToken);
-        const currentUser = await Backendless.UserService.getCurrentUser();
-        console.log("🔍 Current user after setting token:", currentUser ? currentUser.email : "No user");
-        if (!currentUser) {
-          throw new Error("Failed to set user context with token. Token might be invalid, expired, or mismatched.");
-        }
-
+        console.log("🔄 Attempting subscription as anonymous user to channel:", channelName);
         let channel;
         try {
           channel = Backendless.Messaging.subscribe(channelName);
@@ -177,7 +168,7 @@
         return;
       }
 
-      subscribeToChannel(data.token, data.channelName);
+      subscribeToChannel(data.channelName);
     }, { passive: true });
 
     console.log("📡 WebBridge ready on iOS");
