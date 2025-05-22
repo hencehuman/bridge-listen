@@ -5,14 +5,14 @@
   <title>Web Bridge Listener</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net https://*.backendless.app; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <meta http-equiv="Access-Control-Allow-Origin" content="*">
-  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-9"></script>
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-10"></script>
 </head>
 <body>
   <h2>Listening Bridge Active</h2>
 
   <script>
     const platform = navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad") ? "iOS" : "Web";
-    console.log("📡 Script loading started on", platform, "- Version 20250522-9");
+    console.log("📡 Script loading started on", platform, "- Version 20250522-10");
 
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
@@ -63,13 +63,22 @@
           throw new Error("addMessageListener is not available on channel");
         }
         channel.addMessageListener((message) => {
-          console.log("📥 Message received on", platform, "from", channelName, ":", message);
+          console.log("📥 Message received via WebSocket on", platform, "from", channelName, ":", message);
           sendMessage(message);
         });
-        console.log("✅ Listener attached to:", channelName);
+        console.log("✅ WebSocket listener attached to:", channelName);
 
-        setInterval(() => {
-          console.log("🔍 Checking connection for", channelName, "active:", activeChannels.has(channelName));
+        // Fallback: Manual polling for messages
+        setInterval(async () => {
+          try {
+            const messages = await Backendless.Messaging.getMessages(channelName);
+            if (messages.length > 0) {
+              console.log("📥 Messages fetched via polling on", platform, "from", channelName, ":", messages);
+              messages.forEach(msg => sendMessage(msg));
+            }
+          } catch (e) {
+            console.error("❌ Polling error:", e.message);
+          }
         }, 5000);
 
         activeChannels.set(channelName, channel);
@@ -104,7 +113,7 @@
       }
     }, false);
 
-    console.log("📡 WebBridge ready on", platform, "- Version 20250522-9");
+    console.log("📡 WebBridge ready on", platform, "- Version 20250522-10");
   </script>
 </body>
 </html>
