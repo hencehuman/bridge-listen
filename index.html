@@ -5,19 +5,18 @@
   <title>Web Bridge Listener</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://cdn.jsdelivr.net https://*.backendless.app; connect-src *; script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
   <meta http-equiv="Access-Control-Allow-Origin" content="*">
-  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-13"></script>
+  <script src="https://cdn.jsdelivr.net/npm/backendless@7/dist/backendless.min.js?cacheBust=20250522-15"></script>
 </head>
 <body>
   <h2>Listening Bridge Active</h2>
 
   <script>
     const platform = navigator.userAgent.includes("iPhone") || navigator.userAgent.includes("iPad") ? "iOS" : "Web";
-    console.log("📡 Script loading started on", platform, "- Version 20250522-13");
+    console.log("📡 Script loading started on", platform, "- Version 20250522-15");
 
     const APP_ID = "9561383D-4BC2-F4F1-FF73-B529BFE77000";
     const API_KEY = "BEE4A193-7ADC-419B-9EB4-202FDA99ACC6";
     const activeChannels = new Map();
-    let isTokenSet = false;
 
     try {
       Backendless.initApp(APP_ID, API_KEY);
@@ -44,9 +43,9 @@
       }
     }
 
-    function subscribeToChannel(channelName) {
-      if (!isTokenSet) {
-        sendMessage({ status: "error", message: "Token not set. Please provide user token." });
+    function subscribeToChannel(channelName, token) {
+      if (!token) {
+        sendMessage({ status: "error", message: "Token not provided" });
         return;
       }
 
@@ -61,25 +60,38 @@
       }
 
       try {
-        console.log("🔄 Attempting subscription to channel:", channelName);
-        const channel = Backendless.Messaging.subscribe(channelName);
-        console.log("🔍 Channel object created with methods:", Object.keys(channel).join(", "));
+        console.log("🔄 Setting token for channel subscription:", channelName);
+        Backendless.setCurrentUserToken(token);
+        console.log("📡 User token set successfully");
 
-        if (typeof channel.addMessageListener !== "function") {
-          throw new Error("addMessageListener is not available on channel");
-        }
-        channel.addMessageListener((message) => {
-          console.log("📥 Message received on", platform, "from", channelName, ":", message);
-          sendMessage(message);
-        });
-        console.log("✅ Listener attached to:", channelName);
+        // Add a 1-second pause before subscribing
+        setTimeout(() => {
+          try {
+            console.log("🔄 Attempting subscription to channel:", channelName);
+            const channel = Backendless.Messaging.subscribe(channelName);
+            console.log("🔍 Channel object created with methods:", Object.keys(channel).join(", "));
 
-        activeChannels.set(channelName, channel);
-        console.log("✅ Subscribed to:", channelName);
-        sendMessage({ status: "success", message: `Now listening to ${channelName}` });
+            if (typeof channel.addMessageListener !== "function") {
+              throw new Error("addMessageListener is not available on channel");
+            }
+            channel.addMessageListener((message) => {
+              console.log("📥 Message received on", platform, "from", channelName, ":", message);
+              sendMessage(message);
+            });
+            console.log("✅ Listener attached to:", channelName);
+
+            activeChannels.set(channelName, channel);
+            console.log("✅ Subscribed to:", channelName);
+            sendMessage({ status: "success", message: `Now listening to ${channelName}` });
+          } catch (e) {
+            console.error("❌ Subscription error:", e.message, "Stack:", e.stack);
+            sendMessage({ status: "error", message: e.message });
+            if (activeChannels.has(channelName)) activeChannels.delete(channelName);
+          }
+        }, 1000); // 1-second delay
       } catch (e) {
-        console.error("❌ Subscription error:", e.message, "Stack:", e.stack);
-        sendMessage({ status: "error", message: e.message });
+        console.error("❌ Token setting error:", e.message, "Stack:", e.stack);
+        sendMessage({ status: "error", message: "Failed to set token" });
       }
     }
 
@@ -101,21 +113,8 @@
           return;
         }
 
-        if (data.action === "setToken" && data.token) {
-          try {
-            Backendless.setCurrentUserToken(data.token);
-            isTokenSet = true;
-            console.log("📡 User token set successfully");
-            sendMessage({ status: "success", message: "Token set successfully" });
-          } catch (e) {
-            console.error("❌ Failed to set token:", e.message);
-            sendMessage({ status: "error", message: "Failed to set token" });
-          }
-          return;
-        }
-
-        if (data.action === "subscribe" && data.channelName) {
-          subscribeToChannel(data.channelName);
+        if (data.action === "subscribe" && data.channelName && data.token) {
+          subscribeToChannel(data.channelName, data.token);
           return;
         }
       } catch (e) {
@@ -124,7 +123,7 @@
       }
     }, false);
 
-    console.log("📡 WebBridge ready on", platform, "- Version 20250522-13");
+    console.log("📡 WebBridge ready on", platform, "- Version 20250522-15");
   </script>
 </body>
 </html>
